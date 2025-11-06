@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 import pandas as pd
 import sklearn
 
@@ -8,7 +11,7 @@ print(df.head())
 
 # building our model
 # simple linear regression
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Ridge  #added ridge for regularization
 ln = LinearRegression()
 X = df[["Size_sqft", "Bedrooms", "Bathrooms", "Age"]]
 Y = df["Price"]
@@ -18,11 +21,12 @@ print(ln.score(X, Y))  #getting first useful data (r^2 / determination of correl
 # working with train test split to improve model
 from sklearn.model_selection import train_test_split
 X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
-ln.fit(X_train, Y_train)
-print(ln.score(X_test, Y_test))  #getting second useful data (r^2 / determination of correlation)
+rr = Ridge(alpha=1.0)
+rr.fit(X_train, Y_train)
+print(rr.score(X_test, Y_test))  #getting second useful data (r^2 / determination of correlation)
 
 # features of our model formula: intercept and all coefficients
-print(ln.intercept_)
+print("Intercept of model's formula: ", ln.intercept_)
 #print(ln.coef_)
 for attribute, coef in zip(X.columns, ln.coef_):
     print(f"{attribute}: {coef:.2f}")
@@ -57,13 +61,13 @@ joblib.dump(ln, "house_price_predictor_model.pkl")
 print("model saved successfully")
 
 # predicting price of a new house of a user
-size = float(input("Enter size in sqft: "))
+size_sqft = float(input("Enter size in sqft: "))
 bedrooms = int(input("Enter number of bedrooms: "))
 bathrooms = int(input("Enter number of bathrooms: "))
 age = int(input("Enter house age: "))
 
-new_house = [[size, bedrooms, bathrooms, age]]
+new_house = [[size_sqft, bedrooms, bathrooms, age]]
 predicted_price = ln.predict(new_house)
 print(f"Predicted price for the new house: ${predicted_price[0]:.2f}")
 
-# ALPHA PARAMETER & CROSS-VALIDATION TO BE ADDED!!!
+# LASSO PARAMETER & CROSS-VALIDATION TO BE ADDED!!!
