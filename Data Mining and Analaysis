@@ -1,0 +1,43 @@
+import pandas as pd
+file = "AminoAcids.csv"
+df = pd.read_csv(file)
+
+df.columns = ["Name", "Three letter code", "One letter code", "Polarization"]
+#df = df.columns.append([["Formula", "Molecular Weight"]])
+
+import urllib.request
+import urllib.error
+
+df_formula = []
+df_molecular_weight = []
+
+for name in df["Name"]:
+    name1 = name.lower().replace(" ", "%20")
+    #url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{df["Name"]}/property/%3CMolecularFormula%7CMolecularWeight%3E/TXT"
+    url1 = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{name1}/property/MolecularFormula/TXT"
+    url2 = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{name1}/property/MolecularWeight/TXT"
+
+    urls = [url1, url2]
+    for url in urls:
+        try:
+            with urllib.request.urlopen(url) as response:
+                html_respone_bytes = response.read()
+                html_respone_string = html_respone_bytes.decode("utf-8")
+                #print(html_respone_string)
+                if url == url1:
+                    df_formula.append(html_respone_string.strip())
+                elif url == url2:   
+                    df_molecular_weight.append(float(html_respone_string.strip()))
+
+        except urllib.error.HTTPError as e:
+            print(f"HTTP error: {e.code}, {e.reason}")
+
+        except urllib.error.URLError as e:
+            print(f"URL error: {e.code}, {e.reason}")
+
+
+df["Formula"] = df_formula
+df["Molecular Weight"] = df_molecular_weight
+print(df.head())
+
+df.to_csv("Amino-Acids_detailed.csv", index=False)
