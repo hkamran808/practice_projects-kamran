@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 # datasets
@@ -33,17 +34,34 @@ print("\n--- Test Set Scores ---")
 from sklearn.model_selection import train_test_split
 X_train, X_test, Y_train, Y_test = train_test_split(X_modified, Y, test_size=0.2, random_state=42)
 
+# APPLY SMOTE to handle class imbalance
+from imblearn.combine import SMOTETomek
+from imblearn.over_sampling import SMOTE
+
+sm = SMOTETomek(smote=SMOTE(k_neighbors=3, random_state=42), random_state=42)
+X_train_res, Y_train_res = sm.fit_resample(X_train, Y_train)
+print("Before SMOTE:", Y_train.value_counts())
+print("\nAfter SMOTE:", Y_train_res.value_counts())
+
+
+
+# adding class weights to models to handle class imbalance
+from sklearn.utils.class_weight import compute_class_weight
+weights = compute_class_weight(class_weight='balanced', classes=np.array([-1, 0, 1]), y=Y)
+weights_dict = {-1: weights[0], 0: weights[1], 1: weights[2]}
+
+
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 models = {
     "LogReg": LogisticRegression(max_iter=5000),
-    "RanFor": RandomForestClassifier(n_estimators=200),
+    "RanFor": RandomForestClassifier(n_estimators=200, class_weight=weights_dict, random_state=42),
     "GradBoost": GradientBoostingClassifier()
 }
 
 for name, model in models.items():
-    model.fit(X_train, Y_train)
+    model.fit(X_train_res, Y_train_res)
     print(name, model.score(X_test, Y_test))
 
 print("\n--- Cross Validation Scores ---")
@@ -54,7 +72,6 @@ for name, model in models.items():
     print(name, score.mean())
 
 # feature importance from random forest
-import numpy as np
 import matplotlib.pyplot as plt
 importances = models["RanFor"].feature_importances_
 plt.barh(X.columns, importances)
