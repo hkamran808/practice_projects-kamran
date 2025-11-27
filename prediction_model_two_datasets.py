@@ -37,13 +37,10 @@ X_train, X_test, Y_train, Y_test = train_test_split(X_modified, Y, test_size=0.2
 # APPLY SMOTE to handle class imbalance
 from imblearn.combine import SMOTETomek
 from imblearn.over_sampling import SMOTE
-
 sm = SMOTETomek(smote=SMOTE(k_neighbors=3, random_state=42), random_state=42)
 X_train_res, Y_train_res = sm.fit_resample(X_train, Y_train)
 print("Before SMOTE:", Y_train.value_counts())
 print("\nAfter SMOTE:", Y_train_res.value_counts())
-
-
 
 # adding class weights to models to handle class imbalance
 from sklearn.utils.class_weight import compute_class_weight
@@ -145,9 +142,5 @@ le = LabelEncoder()
 df["HOME_TEAM_ENC"] = le.fit_transform(df["HOME_TEAM"])
 df["AWAY_TEAM_ENC"] = le.fit_transform(df["AWAY_TEAM"])
 
-# training model
-from sklearn.linear_model import LogisticRegression
-model = LogisticRegression(penalty='elasticnet', solver='saga', l1_ratio=0.5, max_iter=10000)
-model.fit(X_train, Y_train)
-print("Accuracy:", model.score(X_test, Y_test))
+#model = LogisticRegression(penalty='elasticnet', solver='saga', l1_ratio=0.5, max_iter=10000)
 """
