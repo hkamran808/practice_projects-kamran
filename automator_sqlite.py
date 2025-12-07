@@ -2,6 +2,11 @@ import sqlite3
 from tabulate import tabulate
 from datetime import datetime
 
+def log(message):
+    with open("automator-log.txt", "a") as log_file:
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"[{now}] {message}")
+
 conn = sqlite3.connect("database1.db")
 cur = conn.cursor()
 
@@ -46,6 +51,8 @@ while True:
         cur.execute(command)
     except Exception as e:
         print("SQL error", e)
+        log(f"ERROR: {command} | reason: {e}")
+        continue
 
     first_cmd = command.split()[0].lower()
     if first_cmd == "select":
@@ -57,7 +64,8 @@ while True:
             print(row)
     else:
         conn.commit()
-        print("Executed! Rows that are affected: ", cur.rowcount)
+        log(f"SUCCESS: {command} | rows affected: {cur.rowcount}")
+        #print("Executed! Rows that are affected: ", cur.rowcount)
 
 conn.close()
 print("all commands executed, connection is closed!")
