@@ -57,11 +57,16 @@ while True:
     first_cmd = command.split()[0].lower()
     if first_cmd == "select":
         rows = cur.fetchall()
+        columns = [desc[0] for desc in cur.description]
         print("number of rows fetched:", len(rows))
+        if len(rows) == 0:
+            print("no data found!")
         if len(rows) > 0:
-            print("here they are: ")
-        for row in rows:
-            print(row)
+            print("result table => ")
+            print(tabulate(rows, headers=columns, tablefmt="fancy_grid"))
+            print(f"Displayed: {len(rows)} rows x {len(columns)} columns")
+        #for row in rows:
+        #    print(row)
     else:
         conn.commit()
         log(f"SUCCESS: {command} | rows affected: {cur.rowcount}")
