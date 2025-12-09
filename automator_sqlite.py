@@ -1,17 +1,40 @@
 import sqlite3
 from tabulate import tabulate
 from datetime import datetime
-
+"""
+# to get log file
 def log(message):
     with open("automator-log.txt", "a") as log_file:
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(f"[{now}] {message}")
-
+"""
 conn = sqlite3.connect("database1.db")
 cur = conn.cursor()
 print("Database connected: ")
 
+# query log for storing all commands executed (+avoid errors with drop if exists)
+cur.execute("DROP TABLE IF EXISTS query_logs")
+conn.commit()
+
+cur.execute("""
+CREATE TABLE IF NOT EXISTS query_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    query TEXT NOT NULL,
+    executed_at TEXT NOT NULL,
+    success INTEGER NOT NULL,
+    error_message TEXT
+)
+""")
+conn.commit()
+
+def log_query(action, query, success, error_message=None):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cur.execute("INSERT INTO query_logs (action, query, executed_at, success, error_message) VALUES(?,?,?,?,?)", 
+                (action, query, timestamp, int(success), error_message))
+    conn.commit()
+
 # Interactive mode with UI below:
+# menu modified with "show query history" option
 def menu():
     print("--- My SQLite Automator! ---")
     print("1. Show all users")
@@ -19,52 +42,99 @@ def menu():
     print("3. Update user age")
     print("4. Delete user")
     print("5. Search user by name")
+    print("6. Show query history")
     print("0. Quit")
 
+#each menu function modified so it logs the action, +try/except
 def show_users():
-    cur.execute("SELECT * FROM users")
-    rows = cur.fetchall()
-    columns = [desc[0] for desc in cur.description]
-    if len(rows) == 0:
-        print("no data found!")
-    if len(rows) > 0:
-        print("users => ")
-        print(tabulate(rows, headers=columns, tablefmt="fancy_grid"))
-        print(f"{len(rows)} rows x {len(columns)} columns")
+    query = "SELECT * FROM users"
+
+    try:
+        cur.execute(query)
+        rows = cur.fetchall()
+        columns = [desc[0] for desc in cur.description]
+        if len(rows) == 0:
+            print("no data found!")
+        if len(rows) > 0:
+            print("users => ")
+            print(tabulate(rows, headers=columns, tablefmt="fancy_grid"))
+            print(f"{len(rows)} rows x {len(columns)} columns")
+
+        log_query("SELECT", query, success=1)
+
+    except Exception as e:
+        print("SQL error", e)
+        log_query("SELECT", query, success=0, error_message=str(e))
 
 def add_user():
     name = input("Enter name of user: ")
     age = input("Enter age of user: ")
+    query = "INSERT INTO users (name, age) VALUES (?, ?)"
 
-    cur.execute("INSERT INTO users (name, age) VALUES (?, ?)", (name, age))
-    conn.commit()
-    print("user added succesfully!")
+    try:
+        cur.execute(query, (name, age))
+        conn.commit()
+        print("user added succesfully!")
+        log_query("INSERT", query, success=1)
+    except Exception as e:
+        print("SQL error", e)
+        log_query("INSERT", query, success=0, error_message=str(e))
 
 def update_user():
+    query = "UPDATE users SET age=? WHERE id=? VALUES()"
     id = int(input("Enter ID of user: "))
     new_age = input("Enter updated age of user: ")
-    cur.execute("UPDATE users SET age=? WHERE id=? VALUES()", (new_age, id))
-    conn.commit()
-    print("user's age updated succesfully!")
+
+    try:
+        cur.execute(query, (new_age, id))
+        conn.commit()
+        print("user's age updated succesfully!")
+        log_query("UPDATE", query, success=1)
+    except Exception as e:
+        print("SQL error", e)
+        log_query("UPDATE", query, success=0, error_message=str(e))
 
 def delete_user():
     user_id = int(input("Enter ID of user: "))
-    cur.execute("DELETE FROM users WHERE id=?", (user_id,))
-    conn.commit()
-    print("user deleted succesfully!")
+    query = "DELETE FROM users WHERE id=?"
+    
+    try:
+        cur.execute(query, (user_id,))
+        conn.commit()
+        print("user deleted succesfully!")
+        log_query("DELETE", query, success=1)
+    except Exception as e:
+        print("SQL error", e)
+        log_query("DELETE", query, success=0, error_message=str(e))
 
 def search_user_byName():
+    query = "SELECT * FROM users WHERE name LIKE ?"
     searched_name = input("Enter name to search: ")
-    cur.execute("SELECT * FROM users WHERE name LIKE ?", ('%'+searched_name+'%',))
-    rows = cur.fetchall()
 
+    try:
+        cur.execute(query, ('%'+searched_name+'%',))
+        rows = cur.fetchall()
+
+        if len(rows) == 0:
+            print("No user found!")
+            return
+        
+        columns = [desc[0] for desc in cur.description]
+        print(tabulate(rows, headers=columns, tablefmt="fancy_grid"))
+        print(f"({len(rows)} rows) x {len(columns)} columns")
+        log_query("SELECT", query, success=1)
+    except Exception as e:
+        print("SQL error: ", e)
+        log_query("SEARCH", query, success=0, error_message=str(e))
+
+def query_history():
+    cur.execute("SELECT id, action, executed_at, success FROM query_logs ORDER BY id DESC")
+    rows = cur.fetchall()
     if len(rows) == 0:
-        print("No user found!")
+        print("No history yet.")
         return
-    
-    columns = [desc[0] for desc in cur.description]
-    print(tabulate(rows, headers=columns, tablefmt="fancy_grid"))
-    print(f"({len(rows)} rows) x {len(columns)} columns")
+
+    print(tabulate(rows, headers=["ID","Action","Time","Success"], tablefmt="fancy_grid"))
 
 while True:
     menu()
@@ -80,6 +150,8 @@ while True:
             delete_user()
         case "5":
             search_user_byName()
+        case "6":
+            query_history()
         case "0" | "quit" | "exit" | "leave":
             print("Quitting...")
             break
