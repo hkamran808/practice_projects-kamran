@@ -1,37 +1,37 @@
 import sqlite3
 from tabulate import tabulate
 from datetime import datetime
-"""
-# to get log file
-def log(message):
-    with open("automator-log.txt", "a") as log_file:
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print(f"[{now}] {message}")
-"""
+
 conn = sqlite3.connect("database1.db")
 cur = conn.cursor()
 print("Database connected: ")
 
 # query log for storing all commands executed (+avoid errors with drop if exists)
-cur.execute("DROP TABLE IF EXISTS query_logs")
-conn.commit()
+def setup_query_log():
+    cur.execute("DROP TABLE IF EXISTS query_logs")
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS query_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        action TEXT,
+        query TEXT,
+        executed_at TEXT,
+        success INTEGER,
+        error_message TEXT
+    )
+    """)
+    conn.commit()
 
-cur.execute("""
-CREATE TABLE IF NOT EXISTS query_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    query TEXT NOT NULL,
-    executed_at TEXT NOT NULL,
-    success INTEGER NOT NULL,
-    error_message TEXT
-)
-""")
-conn.commit()
+setup_query_log()
 
 def log_query(action, query, success, error_message=None):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cur.execute("INSERT INTO query_logs (action, query, executed_at, success, error_message) VALUES(?,?,?,?,?)", 
-                (action, query, timestamp, int(success), error_message))
-    conn.commit()
+    try:
+        cur.execute("INSERT INTO query_logs (action, query, executed_at, success, error_message) VALUES(?,?,?,?,?)", 
+                    (action, query, timestamp, int(success), error_message))
+        conn.commit()
+    except Exception as e:
+        print("Failed to write to query_logs table: ", e)
+        #print("Original log: ", action, query, int(success), error_message)
 
 # Interactive mode with UI below:
 # menu modified with "show query history" option
@@ -81,7 +81,7 @@ def add_user():
         log_query("INSERT", query, success=0, error_message=str(e))
 
 def update_user():
-    query = "UPDATE users SET age=? WHERE id=? VALUES()"
+    query = "UPDATE users SET age=? WHERE id=?"
     id = int(input("Enter ID of user: "))
     new_age = input("Enter updated age of user: ")
 
@@ -121,7 +121,7 @@ def search_user_byName():
         
         columns = [desc[0] for desc in cur.description]
         print(tabulate(rows, headers=columns, tablefmt="fancy_grid"))
-        print(f"({len(rows)} rows) x {len(columns)} columns")
+        print(f"{len(rows)} rows x {len(columns)} columns")
         log_query("SELECT", query, success=1)
     except Exception as e:
         print("SQL error: ", e)
@@ -135,6 +135,7 @@ def query_history():
         return
 
     print(tabulate(rows, headers=["ID","Action","Time","Success"], tablefmt="fancy_grid"))
+    print(f"{len(rows)} rows x 4 columns")
 
 while True:
     menu()
@@ -156,14 +157,6 @@ while True:
             print("Quitting...")
             break
         
-    """
-    try:
-        cur.execute(command)
-    except Exception as e:
-        print("SQL error", e)
-        log(f"ERROR: {command} | reason: {e}")
-        continue
-    """
     
 conn.close()
 print("connection is closed!")
