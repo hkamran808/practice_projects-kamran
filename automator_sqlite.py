@@ -45,6 +45,7 @@ def menu():
     print("6. Show query history")
     print("7. Export logs to CSV")
     print("8. Export logs to JSON")
+    print("9. Analytics summary")
     print("0. Quit")
 
 #each menu function modified so it logs the action, +try/except
@@ -169,9 +170,27 @@ def export_logs_to_json(filename):
     columns = ["id", "action", "query", "executed_at", "success", "error_message"]
     with open(filename, mode='w', encoding='utf-8') as file:
         data = [dict(zip(columns, row)) for row in logs]
-        json.dunmp(data, file, indent=4)
+        json.dump(data, file, indent=4)
     print(f"Exported {len(logs)} log entries to {filename}")
 
+# Analytics summary:
+def analytics():
+    print("--- Analytics Summary ---")
+    cur.execute("SELECT COUNT(*) FROM users")
+    total_users = cur.fetchone()[0]
+    print(f"Total users: {total_users}")
+
+    cur.execute("SELECT AVG(age) FROM users")
+    avg_age = cur.fetchone()[0]
+    print(f"Average age of users: {avg_age}")
+
+    cur.execute("SELECT MIN(age) FROM users")
+    min_age = cur.fetchone()[0]
+    print(f"Youngest user: {min_age}")
+
+    cur.execute("SELECT MAX(age) FROM users")
+    max_age = cur.fetchone()[0]
+    print(f"Oldest user: {max_age}")
 
 while True:
     menu()
@@ -193,7 +212,9 @@ while True:
             export_logs_to_csv("query_logs_exported.csv")
         case "8":
             export_logs_to_json("query_logs_exported.json")
-        case "0" | "quit" | "exit" | "leave":
+        case "9":
+            analytics()
+        case "0" | "quit" | "exit" | "leave" | "10" | "":
             print("Quitting...")
             break
         
