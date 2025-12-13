@@ -43,6 +43,8 @@ def menu():
     print("4. Delete user")
     print("5. Search user by name")
     print("6. Show query history")
+    print("7. Export logs to CSV")
+    print("8. Export logs to JSON")
     print("0. Quit")
 
 #each menu function modified so it logs the action, +try/except
@@ -137,6 +139,40 @@ def query_history():
     print(tabulate(rows, headers=["ID","Action","Time","Success"], tablefmt="fancy_grid"))
     print(f"{len(rows)} rows x 4 columns")
 
+#helper function for exp./imp.:
+def get_all_logs():
+    cur.execute("SELECT * FROM query_logs ORDER BY id ASC")
+    logs = cur.fetchall()
+    return logs
+
+import csv
+def export_logs_to_csv(filename):
+    logs = get_all_logs()
+    if not logs:
+        print("No logs to export")
+        return
+    
+    columns = ["id", "action", "query", "executed_at", "success", "error_message"]
+    with open(filename, mode='w', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow(columns)
+        writer.writerows(logs)
+    print(f"Exported {len(logs)} log entries to {filename}")
+
+import json
+def export_logs_to_json(filename):
+    logs = get_all_logs()
+    if not logs:
+        print("No logs to export")
+        return
+    
+    columns = ["id", "action", "query", "executed_at", "success", "error_message"]
+    with open(filename, mode='w', encoding='utf-8') as file:
+        data = [dict(zip(columns, row)) for row in logs]
+        json.dunmp(data, file, indent=4)
+    print(f"Exported {len(logs)} log entries to {filename}")
+
+
 while True:
     menu()
     choice = input("OPTION>> ").strip()
@@ -153,6 +189,10 @@ while True:
             search_user_byName()
         case "6":
             query_history()
+        case "7":
+            export_logs_to_csv("query_logs_exported.csv")
+        case "8":
+            export_logs_to_json("query_logs_exported.json")
         case "0" | "quit" | "exit" | "leave":
             print("Quitting...")
             break
