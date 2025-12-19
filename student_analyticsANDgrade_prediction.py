@@ -1,9 +1,7 @@
 import pandas as pd
-
 df = pd.read_csv("student_performance_project.csv")
-
-#basic info/analysis
 """
+#basic info/analysis
 print(df.head())
 print(df.info())
 print(df.describe(include='all'))
@@ -29,4 +27,23 @@ df[numeric_cols].boxplot(figsize=(10,5))
 plt.title("Boxplot of numeric features")
 plt.show()
 
-#df_clean = df.copy()
+df_clean = df.copy() #copying original data to keep it clean
+
+#t-test
+from scipy.stats import ttest_ind
+group_completed = df_clean[df_clean['test_preparation'] == 'completed']['avg_score']
+group_none = df_clean[df_clean['test_preparation'] == 'none']['avg_score']
+
+t_stat, p_value = ttest_ind(
+    group_completed,
+    group_none,
+    equal_var=False,
+    alternative='greater')
+print("t-test result: ", t_stat, p_value)
+
+#contingency & chi-square test
+contingency = pd.crosstab(df_clean['test_preparation'], df_clean['pass_fail'])
+print("contingency:", contingency)
+from scipy.stats import chi2_contingency
+chi2, p, dof, expected = chi2_contingency(contingency)
+print("chi-square test result: ", chi2, p)
