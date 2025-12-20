@@ -41,9 +41,27 @@ t_stat, p_value = ttest_ind(
     alternative='greater')
 print("t-test result: ", t_stat, p_value)
 
+#z-test (when metric is binary)
+from statsmodels.stats.proportion import proportions_ztest
+
+successes = [df_clean[df_clean['test_preparation']=='completed']['pass_fail'].sum(),
+             df_clean[df_clean['test_preparation']=='none']['pass_fail'].sum()]
+nobs = [len(df_clean[df_clean['test_preparation']=='completed']),
+        len(df_clean[df_clean['test_preparation']=='none'])]
+
+z_stat, p_val = proportions_ztest(successes, nobs, alternative='larger')
+print("z-test result: ", z_stat, p_val)
+
 #contingency & chi-square test
 contingency = pd.crosstab(df_clean['test_preparation'], df_clean['pass_fail'])
 print("contingency:", contingency)
 from scipy.stats import chi2_contingency
 chi2, p, dof, expected = chi2_contingency(contingency)
 print("chi-square test result: ", chi2, p)
+
+#calculating uplift
+mean_control = df_clean[df_clean['test_preparation']=='none']['avg_score'].mean()
+mean_treatment = df_clean[df_clean['test_preparation']=='completed']['avg_score'].mean()
+
+uplift = mean_treatment - mean_control
+print(f"mean_treatment ({mean_treatment}) - mean_control ({mean_control}) = uplift ({uplift})")
