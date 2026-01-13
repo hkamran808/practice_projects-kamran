@@ -6,7 +6,6 @@ The purpose of Project 2 is to improve baseline model from Project 1 by:
 ~Preparing a robust pipeline that can handle unseen data and can later be extended to more advanced models
 """
 
-#Mean Absolute Error: 105891.87533810796
 import pandas as pd
 import numpy as np
 
@@ -17,25 +16,51 @@ y = df["SalePrice"]
 from sklearn.model_selection import train_test_split
 X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size=0.3, random_state=0)
 
-num_cols = ["OverallQual", "GarageCars", "TotRmsAbvGrd", "LotArea", "YearBuilt", "Fireplaces"]
+num_cols_improvised = ["OverallQual", "GarageCars", "TotRmsAbvGrd", "Fireplaces"] #"LotArea", "YearBuilt" are no longer needed here
 cat_cols = ["Neighborhood", "HouseStyle", "ExterQual", "KitchenQual"]
 
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-num_pipeline = Pipeline(steps=[("imputer", SimpleImputer(strategy="median")), ("scaler", StandardScaler())])
-cat_pipeline = Pipeline(steps=[("imputer", SimpleImputer(strategy="most_frequent")), ("encoder", OneHotEncoder(handle_unknown="ignore"))])
+num_pipeline_improvised = Pipeline(steps=[("imputer", SimpleImputer(strategy="median")), 
+                                          ("scaler", StandardScaler())])
+
+cat_pipeline = Pipeline(steps=[("imputer", SimpleImputer(strategy="most_frequent")), 
+                               ("encoder", OneHotEncoder(handle_unknown="ignore"))])
+
+# detecting and understanding what methods to apply those features to improve model
+def log_transform(x):
+    return np.log1p(x)
+def year_to_age(x):
+    return 2026 - x
+
+from sklearn.preprocessing import FunctionTransformer
+lot_area_pipeline = Pipeline(steps=[("imputer", SimpleImputer(strategy="median")), 
+                                    ("lot area", FunctionTransformer(log_transform)), 
+                                    ("scaler", StandardScaler())])
+
+age_pipeline = Pipeline(steps=[("imputer", SimpleImputer(strategy="median")), 
+                                    ("age",  FunctionTransformer(year_to_age)), 
+                                    ("scaler", StandardScaler())])
 
 from sklearn.compose import ColumnTransformer
-preprocessor_model = ColumnTransformer(transformers=[("numerical", num_pipeline, num_cols), ("categorical", cat_pipeline, cat_cols)])
+preprocessor_model = ColumnTransformer(transformers=[("numerical", num_pipeline_improvised, num_cols_improvised), 
+                                                     ("categorical", cat_pipeline, cat_cols)])
+
+preprocessor_model_improvised = ColumnTransformer(transformers=[
+    ("lotarea", lot_area_pipeline, ["LotArea"]),
+    ("age", age_pipeline, ["YearBuilt"]),
+    ("other_numeric", num_pipeline_improvised, num_cols_improvised),
+    ("categorical", cat_pipeline, cat_cols)])
 
 from sklearn.linear_model import LinearRegression
 model = LinearRegression()
-modeling = Pipeline(steps=[("preprocessor", preprocessor_model), ("model", model)])
+modeling_improvised = Pipeline(steps=[("preprocessor", preprocessor_model_improvised), 
+                           ("model", model)])
 
-modeling.fit(X_train, Y_train)
-predictions = modeling.predict(X_test)
+modeling_improvised.fit(X_train, Y_train)
+predictions = modeling_improvised.predict(X_test)
 
 """
 #checking skewness, ...
@@ -43,8 +68,16 @@ import matplotlib.pyplot as plt
 df.boxplot() # or df.hist()
 plt.show()
 """
+"""
 # checking correlation between every feature and target
-for col in num_cols:
+for col in num_cols_improvised + ["LotArea", "YearBuilt"]:
     print(f"{col}:", df[col].corr(df["SalePrice"]))
+"""
 
-# detecting and understanding what methods to apply those features to improve model...
+from sklearn.metrics import mean_absolute_error
+mae = mean_absolute_error(Y_test, predictions)
+print(f"Mean Absolute Error: {mae}")
+print("Improvised modeling complete and evaluated!")
+
+#Mean Absolute Error before feature engineering: 105891.87533810796
+#Mean Absolute Error after feature engineering: 113909.54201972325
