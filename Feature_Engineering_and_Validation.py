@@ -48,6 +48,7 @@ from sklearn.compose import ColumnTransformer
 preprocessor_model = ColumnTransformer(transformers=[("numerical", num_pipeline_improvised, num_cols_improvised), 
                                                      ("categorical", cat_pipeline, cat_cols)])
 
+
 preprocessor_model_improvised = ColumnTransformer(transformers=[
     ("lotarea", lot_area_pipeline, ["LotArea"]),
     ("age", age_pipeline, ["YearBuilt"]),
@@ -59,9 +60,14 @@ model = LinearRegression()
 modeling_improvised = Pipeline(steps=[("preprocessor", preprocessor_model_improvised), 
                            ("model", model)])
 
-modeling_improvised.fit(X_train, Y_train)
-predictions = modeling_improvised.predict(X_test)
+# Target transformation for better modeling (avoiding heteroscedasticity, etc...)
+Y_train_log = np.log1p(Y_train)
 
+modeling_improvised.fit(X_train, Y_train_log)
+predictions = modeling_improvised.predict(X_test)
+original_scale_predictions = np.expm1(predictions)
+
+#Mean Absolute Error: 300695.81500626105 after log transform of target (failure)
 """
 #checking skewness, ...
 import matplotlib.pyplot as plt
@@ -75,18 +81,19 @@ for col in num_cols_improvised + ["LotArea", "YearBuilt"]:
 """
 
 from sklearn.metrics import mean_absolute_error
-mae = mean_absolute_error(Y_test, predictions)
+mae = mean_absolute_error(Y_test, original_scale_predictions)
 print(f"Mean Absolute Error: {mae}")
 print("Improvised modeling complete and evaluated!")
 
 #Mean Absolute Error before feature engineering: 105891.87533810796
 #Mean Absolute Error after feature engineering: 113909.54201972325
-
+"""
+# Visualizing predictions vs actuals and residuals to understand model performance better
 import matplotlib.pyplot as plt
 scatter_plot = plt.scatter(Y_test, predictions, alpha=0.5)
 plt.xlabel("Actual SalePrice")
 plt.ylabel("Predicted SalePrice")
-plt.plot([Y_test.min(), Y_test.max()], [Y_test.min(), Y_test.max()], 'r--')  # Diagonal line
+plt.plot([Y_test.min(), Y_test.max()], [Y_test.min(), Y_test.max()], 'r--')
 plt.show()
 
 residual = Y_test - predictions
@@ -95,3 +102,4 @@ plt.xlabel("Predicted SalePrice")
 plt.ylabel("Residuals")
 plt.axhline(y=0, color='r', linestyle='--')
 plt.show()
+"""
