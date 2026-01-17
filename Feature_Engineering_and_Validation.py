@@ -81,3 +81,17 @@ print("Improvised modeling complete and evaluated!")
 
 #Mean Absolute Error before feature engineering: 105891.87533810796
 #Mean Absolute Error after feature engineering: 113909.54201972325
+
+import matplotlib.pyplot as plt
+scatter_plot = plt.scatter(Y_test, predictions, alpha=0.5)
+plt.xlabel("Actual SalePrice")
+plt.ylabel("Predicted SalePrice")
+plt.plot([Y_test.min(), Y_test.max()], [Y_test.min(), Y_test.max()], 'r--')  # Diagonal line
+plt.show()
+
+residual = Y_test - predictions
+residual_plot = plt.scatter(predictions, residual, alpha=0.5)
+plt.xlabel("Predicted SalePrice")
+plt.ylabel("Residuals")
+plt.axhline(y=0, color='r', linestyle='--')
+plt.show()
