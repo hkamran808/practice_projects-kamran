@@ -67,7 +67,7 @@ modeling_improvised.fit(X_train, Y_train_log)
 predictions = modeling_improvised.predict(X_test)
 original_scale_predictions = np.expm1(predictions)
 
-#Mean Absolute Error: 300695.81500626105 after log transform of target (failure)
+#Mean Absolute Error: 147631.8563312084 after log transform of target
 """
 #checking skewness, ...
 import matplotlib.pyplot as plt
