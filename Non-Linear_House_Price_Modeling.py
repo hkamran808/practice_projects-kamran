@@ -28,17 +28,28 @@ num_pipeline_rf = Pipeline(steps=[("imputer", SimpleImputer(strategy="median"))]
 cat_pipeline = Pipeline(steps=[("imputer", SimpleImputer(strategy="most_frequent")), 
                                ("encoder", OneHotEncoder(handle_unknown="ignore"))])
 
+# adding feature engineering steps back for LotArea and YearBuilt
+from sklearn.preprocessing import FunctionTransformer
+def log_transform(x):
+    return np.log1p(x)
+def year_to_age(x):
+    return 2026 - x
+
+lot_area_pipeline = Pipeline(steps=[("imputer", SimpleImputer(strategy="median")), 
+                                    ("lot area", FunctionTransformer(log_transform))])
+
+age_pipeline = Pipeline(steps=[("imputer", SimpleImputer(strategy="median")), 
+                                    ("age", FunctionTransformer(year_to_age))])
+
 from sklearn.compose import ColumnTransformer
 preprocessor_rf = ColumnTransformer(transformers=[("numerical", num_pipeline_rf, num_cols_improvised), 
                                                      ("categorical", cat_pipeline, cat_cols)])
 
-# Trying non-linear models which can further improve performance
+# Trying non-linear models which can further improve performance. PS: max_leaf_nodes=5,max_depth=None is removed to unlock full random forest regressor capacity
 from sklearn.ensemble import RandomForestRegressor
 rf_model = RandomForestRegressor(n_estimators=300, 
                                  random_state=0, 
-                                 max_leaf_nodes=5, 
-                                 n_jobs=-1,
-                                 max_depth=None)
+                                 n_jobs=-1)
 rf_pipeline = Pipeline(steps=[("preprocessor", preprocessor_rf),
                               ("model", rf_model)])
 rf_pipeline.fit(X_train, Y_train)
@@ -63,3 +74,6 @@ plt.xlabel("Predicted SalePrice")
 plt.ylabel("Residuals")
 plt.axhline(y=0, color='r', linestyle='--')
 plt.show()
+
+# Feature importance from RF model
+importances = rf_pipeline.named_steps["model"].feature_importances_
