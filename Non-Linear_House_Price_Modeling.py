@@ -43,7 +43,9 @@ age_pipeline = Pipeline(steps=[("imputer", SimpleImputer(strategy="median")),
 
 from sklearn.compose import ColumnTransformer
 preprocessor_rf = ColumnTransformer(transformers=[("numerical", num_pipeline_rf, num_cols_improvised), 
-                                                     ("categorical", cat_pipeline, cat_cols)])
+                                                     ("categorical", cat_pipeline, cat_cols),
+                                                     ("lot_area", lot_area_pipeline, ["LotArea"]),
+                                                     ("age", age_pipeline, ["YearBuilt"])])
 
 # Trying non-linear models which can further improve performance. PS: max_leaf_nodes=5,max_depth=None is removed to unlock full random forest regressor capacity
 from sklearn.ensemble import RandomForestRegressor
@@ -76,4 +78,24 @@ plt.axhline(y=0, color='r', linestyle='--')
 plt.show()
 
 # Feature importance from RF model
-importances = rf_pipeline.named_steps["model"].feature_importances_
+preprocessor = rf_pipeline.named_steps["preprocessor"]
+model = rf_pipeline.named_steps["model"]
+
+num_features = num_cols_improvised # no need for ["LotArea", "YearBuilt"], because they are not raw features
+cat_features = preprocessor.named_transformers_["categorical"].named_steps["encoder"].get_feature_names_out(cat_cols).tolist()
+all_features = np.concatenate([num_features, cat_features]) # or  all_features = num_features + cat_features
+
+#print("Feature importances from Random Forest Model:")
+importances = model.feature_importances_
+importances_df = pd.DataFrame({
+    "Feature": all_features,
+    "Importance": importances
+}).sort_values(by="importance", ascending=False)
+
+# Summing importance of base features (after they be splitted with one-hot encoding)
+importances_df["base_feature"] = importances_df["feature"].str.split("_").str[0]
+grouped_importance = importances_df.groupby("base_feature")["importance"].sum().sort_values(ascending=False)
+
+print(importances_df)
+print(grouped_importance)
+# Random Forest MAE: 99137.56288888889, least MAE so far. Improved from linear model's MAE: 113909.54201972325
