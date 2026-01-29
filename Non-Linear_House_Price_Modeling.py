@@ -83,18 +83,20 @@ model = rf_pipeline.named_steps["model"]
 
 num_features = num_cols_improvised # no need for ["LotArea", "YearBuilt"], because they are not raw features
 cat_features = preprocessor.named_transformers_["categorical"].named_steps["encoder"].get_feature_names_out(cat_cols).tolist()
-all_features = np.concatenate([num_features, cat_features]) # or  all_features = num_features + cat_features
+engineered_features = ["LotArea_lot area", "YearBuilt_age"]
+all_features = np.concatenate([num_features, cat_features, engineered_features]) # or  all_features = num_features + cat_features + engineered_features
+assert len(all_features) == len(model.feature_importances_)
 
-#print("Feature importances from Random Forest Model:")
+print("Feature importances from Random Forest Model:")
 importances = model.feature_importances_
 importances_df = pd.DataFrame({
     "Feature": all_features,
     "Importance": importances
-}).sort_values(by="importance", ascending=False)
+}).sort_values(by="Importance", ascending=False)
 
 # Summing importance of base features (after they be splitted with one-hot encoding)
-importances_df["base_feature"] = importances_df["feature"].str.split("_").str[0]
-grouped_importance = importances_df.groupby("base_feature")["importance"].sum().sort_values(ascending=False)
+importances_df["base_feature"] = importances_df["Feature"].str.split("_").str[0]
+grouped_importance = importances_df.groupby("base_feature")["Importance"].sum().sort_values(ascending=False)
 
 print(importances_df)
 print(grouped_importance)
