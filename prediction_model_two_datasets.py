@@ -127,15 +127,22 @@ H = input("enter home team: ")
 A = input("enter away team: ")
 predict_match(H, A)
 
+import pickle
+
+with open("model.pkl", "wb") as f:
+    pickle.dump({"model": final_model, "scaler": scaler}, f)
+
+df2.to_csv("team_stats_clean.csv", index=False)
+print("Done — model.pkl and team_stats_clean.csv saved successfully!")
+
+"""
 # DETAILED REPORT
 from sklearn.metrics import classification_report, accuracy_score
 Y_pred = final_model.predict(X_test)
 print("Accuracy:", accuracy_score(Y_test, Y_pred))
 print("Classification Report:", classification_report(Y_test, Y_pred))
 
-
 # Some Guides Below:
-"""
 # encoding teams for model to understand
 from sklearn.preprocessing import LabelEncoder
 le = LabelEncoder()
